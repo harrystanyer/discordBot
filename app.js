@@ -1,6 +1,7 @@
 const Discord = require('discord.js');
 require('dotenv').config();
 const client = new Discord.Client();
+const { MongoClient } = require('mongodb');
 
 client.on('ready', (msg) => {
     console.log('Bot is ready');
