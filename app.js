@@ -2,29 +2,36 @@ const Discord = require('discord.js');
 require('dotenv').config();
 const client = new Discord.Client();
 const { MongoClient } = require('mongodb');
-/**
- * client.on is the entry point then run a async function to get database calls
- */
+
+var testJson = {
+    type: "data",
+    userCount: 5,
+    dateTime: new Date(),
+    active: true
+};
+
 client.on('ready', (msg) => {
     console.log('Bot is ready');
     console.log('Users online: ' + getOnlineUsers());
     console.log('Total users: ' + getTotalUsers());
 
-    //mongo--------------
-    mongo();
-    //-----------------
-    setInterval(function() {
-            console.log(getNumberOfUsersInVoice());
-        }, 1000) // 1000 represents 1 secord
+    /*setInterval(function() {
+            mongo();
+        }, 10000) // 1000 represents 1 secord*/
 });
 
-async function mongo() {
+async function updateUsersInVC() {
     console.log('mongoing');
     const uri = process.env.MONGO_URI;
     const client = new MongoClient(uri);
     try {
         await client.connect();
-        await listDatabases(client);
+        testJson = {
+            type: "usersInVC",
+            userCount: getNumberOfUsersInVoice(),
+            dateTime: new Date()
+        };
+        await createListing(client, testJson)
     } catch (e) {
         console.error(e);
     } finally {
@@ -39,21 +46,43 @@ async function listDatabases(client) {
     databasesList.databases.forEach(db => console.log(` - ${db.name}`));
 };
 
+async function createListing(client, newListing){
+    const result = await client.db("discordDB").collection("main").insertOne(newListing);
+    console.log(`New listing created with the following id: ${result.insertedId}`);
+}
+
 client.on('message', (msg) => {
     if (msg.content === 'Hello') msg.reply('Hi');
     else if (msg.content === 'Bello') msg.reply('Hi');
 });
 
 client.on('voiceStateUpdate', (oldMember, newMember) => { //this needs to be fixed
-    const newUserChannel = newMember.voice.channelID
-    const oldUserChannel = oldMember.voice.channelID
+    const newUserChannel = newMember.channelID;
+    const oldUserChannel = oldMember.channelID;
 
     if (newUserChannel === '715646727457210390') {
-        console.log(`${newMember.user.username} (${newMember.id}) has joined the channel`);
+        updateUsersInVC();
+        //console.log(`${newMember.member.nickname} (${newMember.id}) has joined the channel`);
     } else if (oldUserChannel === '715646727457210390' && newUserChannel !== '715646727457210390') {
-        console.log(`${newMember.user.username} (${newMember.id}) has left the channel`);
+        updateUsersInVC();
+        //console.log(`${newMember.member.nickname} (${newMember.id}) has left the channel`);
     }
 })
+
+/*client.on('voiceStateUpdate', (oldMember, newMember) => {
+    let newUserChannel = newMember.channelID;
+    let oldUserChannel = oldMember.channelID;
+ 
+    if(newUserChannel === "313377995609866250") //don't remove ""
+    { 
+        // User Joins a voice channel
+        console.log("Joined vc with id "+newUserChannel);
+    }
+    else{
+        // User leaves a voice channel
+        console.log("Left vc");
+    }
+ });*/
 
 client.login(process.env.BOT_TOKEN)
 
